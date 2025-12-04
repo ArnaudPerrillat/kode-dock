@@ -1,9 +1,9 @@
 {
   "name": "kodedock",
   "version": "1.0.0",
-  "description": "Dashboard de projets Windows pour gérer et ouvrir des projets dans VSCode",
+  "description": "Dashboard de projets Windows pour gérer et ouvrir des projets dans un IDE",
   "main": "dist-electron/main.js",
-  "author": "Your Name",
+  "author": "Arnaud Perrillat",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "electron:dev": "vite",
     "electron:build": "npm run build && electron-builder",
-    "electron:build:win": "npm run build && electron-builder --win"
+    "electron:build:win": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npm run build && electron-builder --win"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.2",
@@ -51,7 +51,9 @@
         "portable"
       ],
       "icon": "build/icon.ico",
-      "publisherName": "Your Name"
+      "publisherName": "Arnaud Perrillat",
+      "sign": null,
+      "verifyUpdateCodeSignature": false
     },
     "files": [
       "dist/**/*",

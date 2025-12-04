@@ -60,7 +60,7 @@ export function ProjectCard({
 
   return (
     <Card
-      className="group hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+      className="group hover:shadow-xl hover:shadow-slate-200/30 transition-shadow duration-200 cursor-pointer shadow-none border-slate-100"
       onClick={handleOpenInIDE}
     >
       <CardHeader>

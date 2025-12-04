@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Search, Check, X, Edit2 } from "lucide-react";
+import { Search, Check, X, Edit2, FolderPlus } from "lucide-react";
 import { AppData, Project, IDE, Theme } from "@/types";
 import { Sidebar } from "@/components/Sidebar";
 import { ProjectGrid } from "@/components/ProjectGrid";
@@ -307,7 +307,7 @@ function App() {
             onThemeChange={handleThemeChange}
           />
         ) : activeWorkspace ? (
-          <>
+          <div className="bg-slate-50 h-full">
             <div className="border-b border-border bg-card">
               <div className="flex items-center justify-between p-6">
                 <div className="flex-1">
@@ -367,19 +367,23 @@ function App() {
                   )}
                 </div>
                 <Button onClick={() => setIsAddProjectDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <FolderPlus
+                    className="h-4 w-4"
+                    strokeWidth={2.5}
+                    color="white"
+                  />
                   Add Project
                 </Button>
               </div>
               <div className="px-6 pb-6">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="text"
                     placeholder="Search projects by name, description, path, or tags..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-11 bg-slate-100 border-0 focus:ring-0 rounded-lg h-12"
                   />
                 </div>
               </div>
@@ -394,7 +398,7 @@ function App() {
                 defaultIDE={data.settings.defaultIDE}
               />
             </div>
-          </>
+          </div>
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-4">

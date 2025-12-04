@@ -92,6 +92,7 @@ export function Sidebar({
           {workspaces.map((workspace) => (
             <div
               key={workspace.id}
+              onClick={() => onWorkspaceSelect(workspace.id)}
               className={cn(
                 "group flex items-center gap-2 px-3 py-2 h-10 rounded-md transition-colors select-none",
                 activeWorkspaceId === workspace.id
@@ -135,10 +136,7 @@ export function Sidebar({
                   ) : (
                     <Folder className="h-4 w-4 flex-shrink-0" />
                   )}
-                  <span
-                    className="flex-1 text-xs truncate"
-                    onClick={() => onWorkspaceSelect(workspace.id)}
-                  >
+                  <span className="flex-1 text-xs truncate">
                     {workspace.name}
                   </span>
                   <span className="text-xs opacity-70">
@@ -217,7 +215,7 @@ export function Sidebar({
         <button
           onClick={onSettingsClick}
           className={cn(
-            "w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors",
+            "w-full font-semibold flex items-center gap-2 px-3 py-2 rounded-md transition-colors",
             isSettingsActive
               ? "bg-blue-50 text-blue-600 font-medium"
               : "hover:bg-accent"
