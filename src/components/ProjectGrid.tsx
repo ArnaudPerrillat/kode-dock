@@ -7,6 +7,7 @@ interface ProjectGridProps {
   projects: Project[];
   onProjectDelete: (projectId: string) => void;
   onProjectEdit: (project: Project) => void;
+  onViewDetails: (project: Project) => void;
   onAddProject: () => void;
   defaultIDE: IDE;
 }
@@ -15,6 +16,7 @@ export function ProjectGrid({
   projects,
   onProjectDelete,
   onProjectEdit,
+  onViewDetails,
   onAddProject,
   defaultIDE,
 }: ProjectGridProps) {
@@ -44,6 +46,7 @@ export function ProjectGrid({
           project={project}
           onDelete={onProjectDelete}
           onEdit={onProjectEdit}
+          onViewDetails={onViewDetails}
           defaultIDE={defaultIDE}
         />
       ))}

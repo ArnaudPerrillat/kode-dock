@@ -6,6 +6,7 @@ import {
   AlertCircle,
   Info,
   Palette as PaletteIcon,
+  Terminal,
 } from "lucide-react";
 import {
   Dialog,
@@ -21,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { IconPicker } from "@/components/IconPicker";
 import { storage } from "@/lib/storage";
 import { Project } from "@/types";
@@ -33,7 +35,11 @@ interface AddProjectDialogProps {
     path: string,
     description: string,
     tags: string[],
-    icon: string
+    icon: string,
+    devServerEnabled: boolean,
+    devServerCommand: string,
+    openInBrowser: boolean,
+    openInTerminal: boolean
   ) => void;
   projectToEdit?: Project;
   onProjectEdit?: (
@@ -42,7 +48,11 @@ interface AddProjectDialogProps {
     path: string,
     description: string,
     tags: string[],
-    icon: string
+    icon: string,
+    devServerEnabled: boolean,
+    devServerCommand: string,
+    openInBrowser: boolean,
+    openInTerminal: boolean
   ) => void;
 }
 
@@ -59,6 +69,10 @@ export function AddProjectDialog({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [icon, setIcon] = useState("");
+  const [devServerEnabled, setDevServerEnabled] = useState(true);
+  const [devServerCommand, setDevServerCommand] = useState("npm run dev");
+  const [openInBrowser, setOpenInBrowser] = useState(true);
+  const [openInTerminal, setOpenInTerminal] = useState(false);
   const [error, setError] = useState<string>("");
 
   const isEditMode = !!projectToEdit;
@@ -71,6 +85,10 @@ export function AddProjectDialog({
       setDescription(projectToEdit.description || "");
       setTags(projectToEdit.tags);
       setIcon(projectToEdit.icon || "");
+      setDevServerEnabled(projectToEdit.devServerEnabled ?? true);
+      setDevServerCommand(projectToEdit.devServerCommand || "npm run dev");
+      setOpenInBrowser(projectToEdit.openInBrowser ?? true);
+      setOpenInTerminal(projectToEdit.openInTerminal ?? false);
     } else {
       resetForm();
     }
@@ -83,6 +101,10 @@ export function AddProjectDialog({
     setTags([]);
     setTagInput("");
     setIcon("");
+    setDevServerEnabled(true);
+    setDevServerCommand("npm run dev");
+    setOpenInBrowser(true);
+    setOpenInTerminal(false);
     setError("");
   };
 
@@ -144,7 +166,11 @@ export function AddProjectDialog({
           path.trim(),
           description.trim(),
           tags,
-          icon.trim()
+          icon.trim(),
+          devServerEnabled,
+          devServerCommand.trim(),
+          openInBrowser,
+          openInTerminal
         );
       } else {
         onProjectAdd(
@@ -152,7 +178,11 @@ export function AddProjectDialog({
           path.trim(),
           description.trim(),
           tags,
-          icon.trim()
+          icon.trim(),
+          devServerEnabled,
+          devServerCommand.trim(),
+          openInBrowser,
+          openInTerminal
         );
       }
       resetForm();
@@ -182,13 +212,20 @@ export function AddProjectDialog({
         </DialogHeader>
 
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-12">
+          <TabsList className="grid w-full grid-cols-3 h-12">
             <TabsTrigger
               value="general"
               className="flex items-center gap-2 h-full !shadow-none"
             >
               <Info className="h-4 w-4" />
               General
+            </TabsTrigger>
+            <TabsTrigger
+              value="development"
+              className="flex items-center gap-2 h-full !shadow-none"
+            >
+              <Terminal className="h-4 w-4" />
+              Development
             </TabsTrigger>
             <TabsTrigger
               value="customize"
@@ -282,6 +319,69 @@ export function AddProjectDialog({
                     </Badge>
                   ))}
                 </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="development" className="space-y-4 py-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="devServerEnabled">Enable Dev Server</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Allow starting a development server for this project
+                  </p>
+                </div>
+                <Switch
+                  id="devServerEnabled"
+                  checked={devServerEnabled}
+                  onCheckedChange={setDevServerEnabled}
+                />
+              </div>
+
+              {devServerEnabled && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="devServerCommand">Dev Server Command</Label>
+                    <Input
+                      id="devServerCommand"
+                      value={devServerCommand}
+                      onChange={(e) => setDevServerCommand(e.target.value)}
+                      placeholder="npm run dev"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The command to start the development server (e.g., npm run dev, yarn start, pnpm dev)
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="openInBrowser">Open in Browser</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Automatically open the dev server URL in your browser
+                      </p>
+                    </div>
+                    <Switch
+                      id="openInBrowser"
+                      checked={openInBrowser}
+                      onCheckedChange={setOpenInBrowser}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="openInTerminal">Open in Terminal</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Open the dev server in a new terminal window for full output visibility
+                      </p>
+                    </div>
+                    <Switch
+                      id="openInTerminal"
+                      checked={openInTerminal}
+                      onCheckedChange={setOpenInTerminal}
+                    />
+                  </div>
+                </>
               )}
             </div>
           </TabsContent>

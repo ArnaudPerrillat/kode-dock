@@ -84,6 +84,75 @@ export const storage = {
       return { success: false, error: "Failed to create folder" };
     }
   },
+
+  async runCommand(
+    path: string,
+    command: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await api.runCommand(path, command);
+    } catch (error) {
+      return { success: false, error: "Failed to run command" };
+    }
+  },
+
+  async runDevServer(
+    path: string,
+    command: string,
+    openInBrowser: boolean = true,
+    openInTerminal: boolean = false
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await api.runDevServer(path, command, openInBrowser, openInTerminal);
+    } catch (error) {
+      return { success: false, error: "Failed to start dev server" };
+    }
+  },
+
+  async isProcessRunning(path: string): Promise<boolean> {
+    try {
+      return await api.isProcessRunning(path);
+    } catch (error) {
+      return false;
+    }
+  },
+
+  async killProcess(
+    path: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await api.killProcess(path);
+    } catch (error) {
+      return { success: false, error: "Failed to kill process" };
+    }
+  },
+  async openUrl(url: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await api.openUrl(url);
+    } catch (error) {
+      return { success: false, error: "Failed to open URL" };
+    }
+  },
+
+  async openInExplorer(path: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await api.openInExplorer(path);
+    } catch (error) {
+      return { success: false, error: "Failed to open in file explorer" };
+    }
+  },
+
+  async readSubfolders(parentPath: string): Promise<{
+    success: boolean;
+    folders: { name: string; path: string }[];
+    error?: string;
+  }> {
+    try {
+      return await api.readSubfolders(parentPath);
+    } catch (error) {
+      return { success: false, folders: [], error: "Failed to read subfolders" };
+    }
+  },
 };
 
 export function generateId(): string {
@@ -103,7 +172,11 @@ export function createProject(
   path: string,
   description?: string,
   tags: string[] = [],
-  icon?: string
+  icon?: string,
+  devServerEnabled: boolean = true,
+  devServerCommand: string = "npm run dev",
+  openInBrowser: boolean = true,
+  openInTerminal: boolean = false
 ): Project {
   return {
     id: generateId(),
@@ -113,5 +186,9 @@ export function createProject(
     tags,
     createdAt: new Date().toISOString(),
     icon,
+    devServerEnabled,
+    devServerCommand,
+    openInBrowser,
+    openInTerminal,
   };
 }

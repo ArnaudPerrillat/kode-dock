@@ -6,6 +6,10 @@ export interface Project {
   tags: string[]
   createdAt: string
   icon?: string
+  devServerEnabled?: boolean
+  devServerCommand?: string
+  openInBrowser?: boolean
+  openInTerminal?: boolean
 }
 
 export interface Workspace {
