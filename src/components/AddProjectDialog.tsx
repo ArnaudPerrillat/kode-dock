@@ -77,6 +77,44 @@ export function AddProjectDialog({
 
   const isEditMode = !!projectToEdit;
 
+  // Recommended tags for projects
+  const recommendedTags = [
+    "react",
+    "vue",
+    "angular",
+    "node",
+    "typescript",
+    "javascript",
+    "python",
+    "java",
+    "php",
+    "rust",
+    "go",
+    "frontend",
+    "backend",
+    "fullstack",
+    "web",
+    "mobile",
+    "desktop",
+    "api",
+    "library",
+    "cli",
+    "personal",
+    "work",
+    "client",
+    "portfolio",
+    "learning",
+    "experimental",
+  ];
+
+  // Filter recommended tags based on input and exclude already added tags
+  const filteredRecommendedTags = recommendedTags.filter(
+    (tag) =>
+      tag.toLowerCase().includes(tagInput.toLowerCase()) &&
+      !tags.includes(tag) &&
+      tagInput.trim() !== ""
+  );
+
   // Initialize form with project data when editing
   useEffect(() => {
     if (projectToEdit) {
@@ -145,8 +183,8 @@ export function AddProjectDialog({
     }
   };
 
-  const handleAddTag = () => {
-    const trimmedTag = tagInput.trim();
+  const handleAddTag = (tagToAdd?: string) => {
+    const trimmedTag = (tagToAdd || tagInput).trim();
     if (trimmedTag && !tags.includes(trimmedTag)) {
       setTags([...tags, trimmedTag]);
       setTagInput("");
@@ -244,6 +282,7 @@ export function AddProjectDialog({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="My Awesome Project"
+                autoFocus
               />
             </div>
 
@@ -297,14 +336,36 @@ export function AddProjectDialog({
                   id="tags"
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(e, handleAddTag)}
+                  onKeyDown={(e) => handleKeyDown(e, () => handleAddTag())}
                   placeholder="Add a tag and press Enter"
                   className="flex-1"
                 />
-                <Button type="button" variant="outline" onClick={handleAddTag}>
+                <Button type="button" variant="outline" onClick={() => handleAddTag()}>
                   Add
                 </Button>
               </div>
+
+              {/* Recommended tags filtered by input */}
+              {filteredRecommendedTags.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    Suggested tags:
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {filteredRecommendedTags.slice(0, 8).map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="cursor-pointer hover:bg-secondary"
+                        onClick={() => handleAddTag(tag)}
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
                   {tags.map((tag) => (
@@ -350,7 +411,8 @@ export function AddProjectDialog({
                       placeholder="npm run dev"
                     />
                     <p className="text-xs text-muted-foreground">
-                      The command to start the development server (e.g., npm run dev, yarn start, pnpm dev)
+                      The command to start the development server (e.g., npm run
+                      dev, yarn start, pnpm dev)
                     </p>
                   </div>
 
@@ -372,7 +434,8 @@ export function AddProjectDialog({
                     <div className="space-y-0.5">
                       <Label htmlFor="openInTerminal">Open in Terminal</Label>
                       <p className="text-xs text-muted-foreground">
-                        Open the dev server in a new terminal window for full output visibility
+                        Open the dev server in a new terminal window for full
+                        output visibility
                       </p>
                     </div>
                     <Switch

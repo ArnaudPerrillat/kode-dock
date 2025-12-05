@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { Search, Check, X, Edit2, FolderPlus } from "lucide-react";
+import {
+  Search,
+  Check,
+  X,
+  Edit2,
+  FolderPlus,
+  Trash2,
+  MoreVertical,
+} from "lucide-react";
 import { AppData, Project, IDE, Theme } from "@/types";
 import { Sidebar } from "@/components/Sidebar";
 import { ProjectGrid } from "@/components/ProjectGrid";
@@ -12,6 +20,12 @@ import { GlobalSearchDialog } from "@/components/GlobalSearchDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { storage, createWorkspace, createProject } from "@/lib/storage";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./components/ui/dropdown-menu";
 
 type View = "workspace" | "settings" | "project-details";
 
@@ -35,8 +49,15 @@ function App() {
   const [isEditingWorkspaceName, setIsEditingWorkspaceName] = useState(false);
   const [editingWorkspaceName, setEditingWorkspaceName] = useState("");
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<{
+    id: string;
+    name: string;
+    projectCount: number;
+  } | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Load data on mount
   useEffect(() => {
@@ -295,6 +316,12 @@ function App() {
     setProjectToDelete(null);
   };
 
+  const confirmWorkspaceDelete = async () => {
+    if (!workspaceToDelete) return;
+    await handleWorkspaceDelete(workspaceToDelete.id);
+    setWorkspaceToDelete(null);
+  };
+
   const handleEditProject = (project: Project) => {
     setProjectToEdit(project);
     setIsAddProjectDialogOpen(true);
@@ -437,6 +464,10 @@ function App() {
         onWorkspaceCreateFromFolder={() =>
           setIsWorkspaceCreationDialogOpen(true)
         }
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        isMobileOpen={isSidebarOpen}
+        onMobileOpenChange={setIsSidebarOpen}
       />
 
       <main className="flex-1 overflow-hidden flex">
@@ -470,7 +501,7 @@ function App() {
                   : "flex-1"
               }`}
             >
-              <div className="border-b border-border bg-card">
+              <div className="border-b border-border bg-white dark:bg-slate-900">
                 <div className="flex items-center justify-between p-6">
                   <div className="flex-1">
                     {isEditingWorkspaceName ? (
@@ -519,6 +550,20 @@ function App() {
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() =>
+                            setWorkspaceToDelete({
+                              id: activeWorkspace.id,
+                              name: activeWorkspace.name,
+                              projectCount: activeWorkspace.projects.length,
+                            })
+                          }
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
                     {!isEditingWorkspaceName && (
@@ -534,6 +579,37 @@ function App() {
                     <FolderPlus className="h-4 w-4" strokeWidth={2.5} />
                     Add Project
                   </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={(e) => e.stopPropagation()}
+                        className="ml-2"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setWorkspaceToDelete({
+                            id: activeWorkspace.id,
+                            name: activeWorkspace.name,
+                            projectCount: activeWorkspace.projects.length,
+                          });
+                        }}
+                        className="cursor-pointer text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete workspace
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                 <div className="px-6 pb-6">
                   <div className="relative">
@@ -543,7 +619,7 @@ function App() {
                       placeholder="Search projects by name, description, path, or tags..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-11 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border-0 focus:ring-0 rounded-lg h-12"
+                      className="pl-11 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-0 focus:ring-0 rounded-lg h-12"
                     />
                   </div>
                 </div>
@@ -605,6 +681,19 @@ function App() {
         title="Delete Project"
         description="Are you sure you want to delete this project? This action cannot be undone."
         itemName={projectToDelete?.name}
+      />
+
+      <ConfirmDeleteDialog
+        open={workspaceToDelete !== null}
+        onOpenChange={(open) => !open && setWorkspaceToDelete(null)}
+        onConfirm={confirmWorkspaceDelete}
+        title="Delete Workspace"
+        description={`Are you sure you want to delete this workspace? This will delete ${
+          workspaceToDelete?.projectCount || 0
+        } project${
+          workspaceToDelete?.projectCount !== 1 ? "s" : ""
+        }. This action cannot be undone.`}
+        itemName={workspaceToDelete?.name}
       />
 
       <WorkspaceCreationDialog

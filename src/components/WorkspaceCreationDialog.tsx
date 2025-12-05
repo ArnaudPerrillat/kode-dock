@@ -131,7 +131,7 @@ export function WorkspaceCreationDialog({
         onOpenChange(open);
       }}
     >
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg">
             Create Workspace from Folder

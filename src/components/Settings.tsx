@@ -96,8 +96,8 @@ export function Settings({
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
+          <Card className="border-0 shadow-none">
+            <CardHeader className="px-0">
               <CardTitle className="text-base flex items-center gap-2">
                 <Palette className="h-4 w-4" />
                 Theme
@@ -106,7 +106,7 @@ export function Settings({
                 Choose your preferred color theme
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <div className="grid grid-cols-3 gap-4">
                 {themes.map((themeOption) => (
                   <button
@@ -164,8 +164,8 @@ export function Settings({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="border-0">
+            <CardHeader className="px-0">
               <CardTitle className="text-base flex items-center gap-2">
                 <Code2 className="h-4 w-4" />
                 Default IDE
@@ -174,7 +174,7 @@ export function Settings({
                 Choose which IDE or editor to use when opening projects
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <div className="grid gap-3">
                 {IDEs.map((ide) => (
                   <button
