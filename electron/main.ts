@@ -4,11 +4,12 @@ import { exec, spawn, ChildProcess } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs/promises";
+import { ProcessManager } from "./processManager";
 
 const execAsync = promisify(exec);
 
-// Track running processes by project path
-const runningProcesses = new Map<string, ChildProcess>();
+// Process manager for dev servers
+const processManager = new ProcessManager();
 
 let mainWindow: BrowserWindow | null = null;
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
@@ -49,6 +50,11 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+// Clean up processes before quitting
+app.on("before-quit", () => {
+  processManager.cleanup();
 });
 
 // Get the data file path
@@ -245,12 +251,12 @@ ipcMain.handle(
         );
       }
 
-      // Store the process for tracking
-      runningProcesses.set(projectPath, childProcess);
+      // Note: Process tracking is not needed for terminal-launched processes
+      // as they run independently in their own terminal window
 
-      // Clean up when process exits
+      // Clean up when process exits (if still accessible)
       childProcess.on("exit", () => {
-        runningProcesses.delete(projectPath);
+        // Process has exited
       });
 
       // Unref so it doesn't keep the app running
@@ -311,459 +317,31 @@ ipcMain.handle("read-subfolders", async (_event, parentPath: string) => {
 // Run dev server and capture output to extract localhost URL
 ipcMain.handle(
   "run-dev-server",
-  async (_event, projectPath: string, command: string, openInBrowser: boolean = true, openInTerminal: boolean = false) => {
-    try {
-      // If openInTerminal is true, open a new terminal window with the command
-      if (openInTerminal) {
-        const platform = process.platform;
-        let terminalCommand: string;
-
-        if (platform === 'win32') {
-          // Windows: Use start command to open a new cmd window
-          terminalCommand = `start cmd /k "cd /d "${projectPath}" && ${command}"`;
-          spawn('cmd.exe', ['/c', terminalCommand], { shell: true, detached: true });
-        } else if (platform === 'darwin') {
-          // macOS: Use osascript to open Terminal.app
-          const script = `tell application "Terminal" to do script "cd \\"${projectPath}\\" && ${command}"`;
-          spawn('osascript', ['-e', script], { detached: true });
-        } else {
-          // Linux: Try common terminal emulators
-          const terminals = [
-            { cmd: 'gnome-terminal', args: ['--working-directory', projectPath, '--', 'bash', '-c', `${command}; exec bash`] },
-            { cmd: 'konsole', args: ['--workdir', projectPath, '-e', `bash -c "${command}; exec bash"`] },
-            { cmd: 'xterm', args: ['-e', `cd "${projectPath}" && ${command}; bash`] },
-          ];
-
-          let launched = false;
-          for (const terminal of terminals) {
-            try {
-              spawn(terminal.cmd, terminal.args, { detached: true });
-              launched = true;
-              break;
-            } catch (err) {
-              // Try next terminal
-              continue;
-            }
-          }
-
-          if (!launched) {
-            return {
-              success: false,
-              error: "Could not find a compatible terminal emulator. Please install gnome-terminal, konsole, or xterm.",
-            };
-          }
-        }
-
-        // If openInBrowser is also enabled, spawn a silent background process to detect the URL
-        if (openInBrowser) {
-          const commandParts = command.split(" ");
-          const mainCommand = commandParts[0];
-          const args = commandParts.slice(1);
-
-          // Spawn a silent process just for URL detection
-          const urlDetectorProcess = spawn(mainCommand, args, {
-            cwd: projectPath,
-            shell: true,
-            detached: false,
-            stdio: ["ignore", "pipe", "pipe"],
-          });
-
-          let urlFound = false;
-
-          // Multiple regex patterns to catch different URL formats
-          const urlPatterns = [
-            /https?:\/\/localhost:\d+/gi,
-            /https?:\/\/127\.0\.0\.1:\d+/gi,
-            /https?:\/\/\[::1\]:\d+/gi,
-            /localhost:\d+/gi,
-            /127\.0\.0\.1:\d+/gi,
-          ];
-
-          const processOutput = (output: string) => {
-            if (!urlFound) {
-              // Strip ANSI color codes and control characters
-              const cleanOutput = output
-                .replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '')
-                .replace(/\x1B\][^\x07]*\x07/g, '')
-                .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-
-              // Try each pattern to find localhost URL
-              for (const pattern of urlPatterns) {
-                const matches = cleanOutput.match(pattern);
-                if (matches && matches.length > 0) {
-                  let localhostUrl = matches[0];
-
-                  // Add http:// if not present
-                  if (!localhostUrl.startsWith('http')) {
-                    localhostUrl = 'http://' + localhostUrl;
-                  }
-
-                  // Remove trailing slash
-                  localhostUrl = localhostUrl.replace(/\/$/, '');
-
-                  urlFound = true;
-                  console.log(`Dev server URL detected: ${localhostUrl}`);
-
-                  // Open the URL in the default browser
-                  shell.openExternal(localhostUrl).catch((err) => {
-                    console.error("Error opening browser:", err);
-                  });
-
-                  // Kill the detector process since we only needed it for URL detection
-                  urlDetectorProcess.kill();
-                  break;
-                }
-              }
-            }
-          };
-
-          // Listen to stdout
-          if (urlDetectorProcess.stdout) {
-            urlDetectorProcess.stdout.on("data", (data: Buffer) => {
-              processOutput(data.toString());
-            });
-          }
-
-          // Listen to stderr (many dev servers output to stderr)
-          if (urlDetectorProcess.stderr) {
-            urlDetectorProcess.stderr.on("data", (data: Buffer) => {
-              processOutput(data.toString());
-            });
-          }
-
-          // Clean up when process exits
-          urlDetectorProcess.on("exit", () => {
-            // Process exited, no cleanup needed since we're not tracking it
-          });
-
-          urlDetectorProcess.on("error", (error) => {
-            console.error("URL detector process error:", error);
-          });
-        }
-
-        return { success: true };
-      }
-
-      // Check if there's already a process running for this project
-      if (runningProcesses.has(projectPath)) {
-        return {
-          success: false,
-          error: "A dev server is already running for this project",
-        };
-      }
-
-      // Split command into parts for better compatibility
-      const commandParts = command.split(" ");
-      const mainCommand = commandParts[0];
-      const args = commandParts.slice(1);
-
-      // Spawn the process in the project directory
-      const childProcess = spawn(mainCommand, args, {
-        cwd: projectPath,
-        shell: true,
-        detached: false,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-
-      if (!childProcess.pid) {
-        return {
-          success: false,
-          error: "Failed to start process - no PID assigned",
-        };
-      }
-
-      runningProcesses.set(projectPath, childProcess);
-
-      let urlFound = false;
-
-      // Multiple regex patterns to catch different URL formats
-      const urlPatterns = [
-        /https?:\/\/localhost:\d+/gi,
-        /https?:\/\/127\.0\.0\.1:\d+/gi,
-        /https?:\/\/\[::1\]:\d+/gi,
-        /localhost:\d+/gi,
-        /127\.0\.0\.1:\d+/gi,
-      ];
-
-      const processOutput = (output: string, source: string) => {
-        if (!urlFound) {
-          // Strip ANSI color codes and control characters
-          const cleanOutput = output
-            .replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '')
-            .replace(/\x1B\][^\x07]*\x07/g, '')
-            .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-
-          // Try each pattern to find localhost URL
-          for (const pattern of urlPatterns) {
-            const matches = cleanOutput.match(pattern);
-            if (matches && matches.length > 0) {
-              let localhostUrl = matches[0];
-
-              // Add http:// if not present
-              if (!localhostUrl.startsWith('http')) {
-                localhostUrl = 'http://' + localhostUrl;
-              }
-
-              // Remove trailing slash
-              localhostUrl = localhostUrl.replace(/\/$/, '');
-
-              urlFound = true;
-              console.log(`Dev server started at ${localhostUrl}`);
-
-              // Open the URL in the default browser if enabled
-              if (openInBrowser) {
-                shell.openExternal(localhostUrl).catch((err) => {
-                  console.error("Error opening browser:", err);
-                });
-              }
-
-              break;
-            }
-          }
-        }
-      };
-
-      // Listen to stdout
-      if (childProcess.stdout) {
-        childProcess.stdout.on("data", (data: Buffer) => {
-          processOutput(data.toString(), "stdout");
-        });
-      }
-
-      // Listen to stderr (many dev servers output to stderr)
-      if (childProcess.stderr) {
-        childProcess.stderr.on("data", (data: Buffer) => {
-          processOutput(data.toString(), "stderr");
-        });
-      }
-
-      // Handle process exit
-      childProcess.on("exit", () => {
-        runningProcesses.delete(projectPath);
-      });
-
-      childProcess.on("error", (error) => {
-        console.error("Dev server process error:", error);
-        runningProcesses.delete(projectPath);
-      });
-
-      return { success: true };
-    } catch (error) {
-      console.error("Error running dev server:", error);
-      return {
-        success: false,
-        error: `Failed to run dev server: ${(error as Error).message}`,
-      };
-    }
+  async (
+    _event,
+    projectPath: string,
+    command: string,
+    openInBrowser: boolean = true,
+    openInTerminal: boolean = false
+  ) => {
+    return await processManager.startDevServer(projectPath, command, {
+      openInBrowser,
+      openInTerminal,
+    });
   }
 );
 
 // Check if a process is running for a project
 ipcMain.handle("is-process-running", async (_event, projectPath: string) => {
-  // Don't just check the map, actually search for running node processes
-  const platform = process.platform;
-
-  if (platform === "win32") {
-    try {
-      // Normalize path for comparison
-      const normalizedPath = projectPath.toLowerCase().replace(/\\/g, "/");
-
-      // Use PowerShell to get node processes with command lines (wmic is deprecated)
-      const psCommand = `Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Select-Object ProcessId,CommandLine | ConvertTo-Json`;
-      const encoded = Buffer.from(psCommand, "utf16le").toString("base64");
-      const { stdout } = await execAsync(
-        `powershell -NoProfile -EncodedCommand ${encoded}`,
-        {
-          maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-        }
-      );
-
-      let processes: Array<{ ProcessId: number; CommandLine: string }> = [];
-
-      if (stdout.trim()) {
-        try {
-          const parsed = JSON.parse(stdout);
-          // Handle both single object and array responses
-          processes = Array.isArray(parsed) ? parsed : [parsed];
-        } catch (parseError) {
-          console.error("Failed to parse PowerShell output:", parseError);
-          return false;
-        }
-      }
-
-      // Check if any process is running in our project directory
-      for (const proc of processes) {
-        if (proc && proc.CommandLine) {
-          // Normalize command line slashes and case for reliable comparison
-          const commandLine = String(proc.CommandLine)
-            .toLowerCase()
-            .replace(/\\/g, "/");
-          if (commandLine.includes(normalizedPath)) {
-            return true;
-          }
-        }
-      }
-
-      return false;
-    } catch (error) {
-      console.error("Error checking process:", error);
-      return false;
-    }
-  } else {
-    // On Unix-like systems, use ps to find node processes
-    try {
-      const { stdout } = await execAsync(
-        `ps aux | grep node | grep "${projectPath}"`
-      );
-      return stdout.trim().length > 0;
-    } catch (error) {
-      return false;
-    }
-  }
+  return await processManager.isProcessRunning(projectPath);
 });
 
 // Kill a running process for a project
 ipcMain.handle("kill-process", async (_event, projectPath: string) => {
-  try {
-    const platform = process.platform;
+  return await processManager.killProcess(projectPath);
+});
 
-    if (platform === "win32") {
-      // On Windows, use PowerShell to find and kill node processes
-      // Normalize path for comparison
-      const normalizedPath = projectPath.toLowerCase().replace(/\\/g, "/");
-
-      try {
-        // Use PowerShell to get node processes with command lines.
-        // Use Get-CimInstance and pass the command via -EncodedCommand to avoid quoting issues
-        // when invoking PowerShell from Node.
-        const psCommand = `Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Select-Object ProcessId,CommandLine | ConvertTo-Json`;
-        const encoded = Buffer.from(psCommand, "utf16le").toString("base64");
-        const { stdout } = await execAsync(
-          `powershell -NoProfile -EncodedCommand ${encoded}`,
-          {
-            maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-          }
-        );
-
-        console.log("PowerShell output:", stdout.substring(0, 200)); // Log first 200 chars
-
-        let processes: Array<{ ProcessId: number; CommandLine: string }> = [];
-
-        if (stdout.trim()) {
-          try {
-            const parsed = JSON.parse(stdout);
-            // Handle both single object and array responses
-            processes = Array.isArray(parsed) ? parsed : [parsed];
-          } catch (parseError) {
-            console.error("Failed to parse PowerShell output:", parseError);
-            return {
-              success: false,
-              error: "Failed to parse process list",
-            };
-          }
-        }
-
-        const pidsToKill: number[] = [];
-
-        for (const proc of processes) {
-          if (proc && proc.ProcessId && proc.CommandLine) {
-            // Normalize command line slashes and case for reliable comparison
-            const commandLine = String(proc.CommandLine)
-              .toLowerCase()
-              .replace(/\\/g, "/");
-            if (commandLine.includes(normalizedPath)) {
-              console.log(
-                `Found node process ${proc.ProcessId} for project: ${projectPath}`
-              );
-              pidsToKill.push(proc.ProcessId);
-            }
-          }
-        }
-
-        if (pidsToKill.length === 0) {
-          console.log(`No node processes found for path: ${projectPath}`);
-          return {
-            success: false,
-            error: "No running dev server found for this project",
-          };
-        }
-
-        // Kill all found processes
-        let killedCount = 0;
-        for (const pid of pidsToKill) {
-          try {
-            await execAsync(`taskkill /PID ${pid} /T /F`);
-            console.log(`Killed process ${pid}`);
-            killedCount++;
-          } catch (error) {
-            console.log(`Failed to kill process ${pid}:`, error);
-          }
-        }
-
-        // Remove from our tracking if it exists
-        runningProcesses.delete(projectPath);
-
-        if (killedCount > 0) {
-          return { success: true };
-        } else {
-          return {
-            success: false,
-            error: "Found processes but failed to kill them",
-          };
-        }
-      } catch (error) {
-        console.error("Error in PowerShell command:", error);
-        return {
-          success: false,
-          error: `Failed to query processes: ${(error as Error).message}`,
-        };
-      }
-    } else {
-      // On Unix-like systems, find and kill node processes
-      try {
-        const { stdout } = await execAsync(
-          `ps aux | grep node | grep "${projectPath}" | grep -v grep`
-        );
-        const lines = stdout.trim().split("\n");
-
-        if (lines.length === 0 || !stdout.trim()) {
-          return {
-            success: false,
-            error: "No running process found for this project",
-          };
-        }
-
-        for (const line of lines) {
-          const parts = line.trim().split(/\s+/);
-          const pid = parts[1];
-          if (pid) {
-            try {
-              await execAsync(`kill -9 ${pid}`);
-            } catch (error) {
-              console.log(
-                `Failed to kill process ${pid}, might already be terminated`
-              );
-            }
-          }
-        }
-
-        // Remove from our tracking if it exists
-        runningProcesses.delete(projectPath);
-
-        return { success: true };
-      } catch (error) {
-        // grep returns non-zero exit code if no matches found
-        return {
-          success: false,
-          error: "No running process found for this project",
-        };
-      }
-    }
-  } catch (error) {
-    console.error("Error killing process:", error);
-    return {
-      success: false,
-      error: `Failed to kill process: ${(error as Error).message}`,
-    };
-  }
+// Get the URL of a running dev server
+ipcMain.handle("get-dev-server-url", async (_event, projectPath: string) => {
+  return processManager.getUrl(projectPath);
 });

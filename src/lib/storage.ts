@@ -101,7 +101,7 @@ export const storage = {
     command: string,
     openInBrowser: boolean = true,
     openInTerminal: boolean = false
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; url?: string }> {
     try {
       return await api.runDevServer(path, command, openInBrowser, openInTerminal);
     } catch (error) {
@@ -124,6 +124,14 @@ export const storage = {
       return await api.killProcess(path);
     } catch (error) {
       return { success: false, error: "Failed to kill process" };
+    }
+  },
+
+  async getDevServerUrl(path: string): Promise<string | undefined> {
+    try {
+      return await api.getDevServerUrl(path);
+    } catch (error) {
+      return undefined;
     }
   },
   async openUrl(url: string): Promise<{ success: boolean; error?: string }> {

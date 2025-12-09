@@ -41,12 +41,18 @@ export function ProjectDetails({
   const [error, setError] = useState<string | null>(null);
   const [isRunningCommand, setIsRunningCommand] = useState(false);
   const [isProcessRunning, setIsProcessRunning] = useState(false);
+  const [devServerUrl, setDevServerUrl] = useState<string | undefined>();
 
-  // Check if process is running on mount
+  // Check if process is running on mount and fetch URL
   useEffect(() => {
     const checkProcess = async () => {
       const running = await storage.isProcessRunning(project.path);
       setIsProcessRunning(running);
+
+      if (running) {
+        const url = await storage.getDevServerUrl(project.path);
+        setDevServerUrl(url);
+      }
     };
     checkProcess();
   }, [project.path]);
@@ -92,6 +98,24 @@ export function ProjectDetails({
       setIsRunningCommand(false);
     } else {
       setIsProcessRunning(true);
+      setDevServerUrl(result.url);
+
+      // Poll for URL if not immediately available
+      if (!result.url) {
+        const pollUrl = async () => {
+          for (let i = 0; i < 60; i++) {
+            // Poll for up to 30 seconds
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            const url = await storage.getDevServerUrl(project.path);
+            if (url) {
+              setDevServerUrl(url);
+              break;
+            }
+          }
+        };
+        pollUrl();
+      }
+
       setTimeout(() => {
         setIsRunningCommand(false);
       }, 2000);
@@ -108,6 +132,7 @@ export function ProjectDetails({
       setError(result.error || "Failed to stop dev server");
     } else {
       setIsProcessRunning(false);
+      setDevServerUrl(undefined);
     }
 
     setTimeout(() => {
@@ -351,6 +376,22 @@ export function ProjectDetails({
                   {project.devServerCommand || "npm run dev"}
                 </code>
               </div>
+
+              {isProcessRunning && devServerUrl && (
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                    Server URL
+                  </h3>
+                  <button
+                    onClick={() => storage.openUrl(devServerUrl)}
+                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline bg-blue-50 px-3 py-2 rounded w-full justify-between group"
+                    title="Click to open in browser"
+                  >
+                    <code className="font-mono">{devServerUrl}</code>
+                    <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

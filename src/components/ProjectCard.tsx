@@ -10,6 +10,7 @@ import {
   MoreVertical,
   Info,
   Code2,
+  ExternalLink,
 } from "lucide-react";
 import { Project, IDE } from "@/types";
 import {
@@ -53,13 +54,19 @@ export function ProjectCard({
     "starting" | "stopping" | null
   >(null);
   const [isProcessRunning, setIsProcessRunning] = useState(false);
+  const [devServerUrl, setDevServerUrl] = useState<string | undefined>();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Check if process is running on mount
+  // Check if process is running on mount and fetch URL
   useEffect(() => {
     const checkProcess = async () => {
       const running = await storage.isProcessRunning(project.path);
       setIsProcessRunning(running);
+
+      if (running) {
+        const url = await storage.getDevServerUrl(project.path);
+        setDevServerUrl(url);
+      }
     };
     checkProcess();
   }, [project.path]);
@@ -104,6 +111,24 @@ export function ProjectCard({
     } else {
       // Process started successfully - the URL will be auto-detected and opened (if not in terminal mode)
       setIsProcessRunning(true);
+      setDevServerUrl(result.url);
+
+      // Poll for URL if not immediately available
+      if (!result.url) {
+        const pollUrl = async () => {
+          for (let i = 0; i < 60; i++) {
+            // Poll for up to 30 seconds
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            const url = await storage.getDevServerUrl(project.path);
+            if (url) {
+              setDevServerUrl(url);
+              break;
+            }
+          }
+        };
+        pollUrl();
+      }
+
       setIsRunningCommand(false);
       setCommandAction(null);
     }
@@ -126,6 +151,7 @@ export function ProjectCard({
       setCommandAction(null);
     } else {
       setIsProcessRunning(false);
+      setDevServerUrl(undefined);
       setIsRunningCommand(false);
       setCommandAction(null);
     }
@@ -315,6 +341,20 @@ export function ProjectCard({
                 </>
               )}
             </div>
+          )}
+
+          {isProcessRunning && devServerUrl && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                storage.openUrl(devServerUrl);
+              }}
+              className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 hover:underline bg-blue-50 px-2 py-1 rounded group/url"
+              title="Click to open in browser"
+            >
+              <ExternalLink className="h-3 w-3" />
+              <span className="font-mono">{devServerUrl}</span>
+            </button>
           )}
         </div>
       </CardContent>

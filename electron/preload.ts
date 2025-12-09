@@ -72,9 +72,10 @@ export interface ElectronAPI {
     command: string,
     openInBrowser?: boolean,
     openInTerminal?: boolean
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; url?: string }>;
   isProcessRunning: (path: string) => Promise<boolean>;
   killProcess: (path: string) => Promise<{ success: boolean; error?: string }>;
+  getDevServerUrl: (path: string) => Promise<string | undefined>;
   openUrl: (url: string) => Promise<{ success: boolean; error?: string }>;
   openInExplorer: (path: string) => Promise<{ success: boolean; error?: string }>;
   readSubfolders: (parentPath: string) => Promise<{
@@ -102,6 +103,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   isProcessRunning: (path: string) =>
     ipcRenderer.invoke("is-process-running", path),
   killProcess: (path: string) => ipcRenderer.invoke("kill-process", path),
+  getDevServerUrl: (path: string) =>
+    ipcRenderer.invoke("get-dev-server-url", path),
   openUrl: (url: string) => ipcRenderer.invoke("open-url", url),
   openInExplorer: (path: string) => ipcRenderer.invoke("open-in-explorer", path),
   readSubfolders: (parentPath: string) =>
