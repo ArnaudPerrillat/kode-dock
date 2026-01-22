@@ -1,5 +1,3 @@
-import { Code2, Check, Palette } from "lucide-react";
-import { IDE, Theme } from "@/types";
 import {
   Card,
   CardContent,
@@ -7,6 +5,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { IDE, Theme } from "@/types";
+import { Check, Code2, Palette } from "lucide-react";
 
 interface SettingsProps {
   defaultIDE: IDE;
@@ -46,6 +46,11 @@ const IDEs: Array<{ value: IDE; label: string; description: string }> = [
     value: "notepad++",
     label: "Notepad++",
     description: "Windows text and source code editor",
+  },
+  {
+    value: "antigravity",
+    label: "Google Antigravity IDE",
+    description: "Google's experimental cloud IDE (antigravity.dev)",
   },
 ];
 

@@ -1,9 +1,8 @@
-import { app, BrowserWindow, ipcMain, dialog } from "electron";
-import { shell } from "electron";
-import { exec, spawn, ChildProcess } from "child_process";
-import { promisify } from "util";
-import path from "path";
+import { ChildProcess, exec, spawn } from "child_process";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import fs from "fs/promises";
+import path from "path";
+import { promisify } from "util";
 import { ProcessManager } from "./processManager";
 
 const execAsync = promisify(exec);
@@ -157,6 +156,7 @@ ipcMain.handle(
       sublime: { command: "subl", name: "Sublime Text" },
       atom: { command: "atom", name: "Atom" },
       "notepad++": { command: "notepad++", name: "Notepad++" },
+      antigravity: { command: "antigravity", name: "Google Antigravity IDE" },
     };
 
     const ideConfig = ideCommands[ide];
@@ -185,7 +185,7 @@ ipcMain.handle(
         };
       }
     }
-  }
+  },
 );
 
 // Check if a path exists
@@ -226,7 +226,7 @@ ipcMain.handle(
           {
             shell: true,
             detached: true,
-          }
+          },
         );
       } else if (platform === "darwin") {
         // macOS: Open Terminal.app and run the command
@@ -247,7 +247,7 @@ ipcMain.handle(
           ],
           {
             detached: true,
-          }
+          },
         );
       }
 
@@ -270,7 +270,7 @@ ipcMain.handle(
         error: `Failed to run command: ${(error as Error).message}`,
       };
     }
-  }
+  },
 );
 
 // Open a URL in the user's default browser
@@ -322,13 +322,13 @@ ipcMain.handle(
     projectPath: string,
     command: string,
     openInBrowser: boolean = true,
-    openInTerminal: boolean = false
+    openInTerminal: boolean = false,
   ) => {
     return await processManager.startDevServer(projectPath, command, {
       openInBrowser,
       openInTerminal,
     });
-  }
+  },
 );
 
 // Check if a process is running for a project

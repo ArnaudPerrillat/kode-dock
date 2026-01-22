@@ -1,33 +1,41 @@
 export interface Project {
-  id: string
-  name: string
-  path: string
-  description?: string
-  tags: string[]
-  createdAt: string
-  icon?: string
-  devServerEnabled?: boolean
-  devServerCommand?: string
-  openInBrowser?: boolean
-  openInTerminal?: boolean
+  id: string;
+  name: string;
+  path: string;
+  description?: string;
+  tags: string[];
+  createdAt: string;
+  icon?: string;
+  devServerEnabled?: boolean;
+  devServerCommand?: string;
+  openInBrowser?: boolean;
+  openInTerminal?: boolean;
 }
 
 export interface Workspace {
-  id: string
-  name: string
-  projects: Project[]
+  id: string;
+  name: string;
+  projects: Project[];
 }
 
-export type IDE = 'vscode' | 'cursor' | 'webstorm' | 'intellij' | 'sublime' | 'atom' | 'notepad++'
+export type IDE =
+  | "vscode"
+  | "cursor"
+  | "webstorm"
+  | "intellij"
+  | "sublime"
+  | "atom"
+  | "notepad++"
+  | "antigravity";
 
-export type Theme = 'light' | 'dark' | 'system'
+export type Theme = "light" | "dark" | "system";
 
 export interface Settings {
-  defaultIDE: IDE
-  theme: Theme
+  defaultIDE: IDE;
+  theme: Theme;
 }
 
 export interface AppData {
-  workspaces: Workspace[]
-  settings: Settings
+  workspaces: Workspace[];
+  settings: Settings;
 }
