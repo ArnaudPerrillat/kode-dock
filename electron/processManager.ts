@@ -151,10 +151,20 @@ export class ProcessManager {
 
     try {
       if (platform === "win32") {
-        // Windows: Open Command Prompt
+        // Windows: Open Command Prompt with correct working directory
+        // Use start "" /D "path" cmd /K "command" to ensure CWD is set correctly and title is handled
         spawn(
           "cmd.exe",
-          ["/c", `start`, `cmd`, `/K`, `cd /d "${projectPath}" && ${command}`],
+          [
+            "/c",
+            "start",
+            "",
+            "/D",
+            `"${projectPath}"`,
+            "cmd",
+            "/K",
+            command,
+          ],
           {
             shell: true,
             detached: true,
@@ -233,7 +243,7 @@ export class ProcessManager {
     projectPath: string,
     command: string,
     openInBrowser: boolean
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; url?: string }> {
     const commandParts = command.split(" ");
     const mainCommand = commandParts[0];
     const args = commandParts.slice(1);
