@@ -5,7 +5,8 @@
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
       "Bash(npx tsc --noEmit)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")"
     ],
     "deny": [],
     "ask": []

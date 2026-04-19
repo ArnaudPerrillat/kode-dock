@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { AppData, Project, IDE, Theme } from "@/types";
 import { Sidebar } from "@/components/Sidebar";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { ProjectGrid } from "@/components/ProjectGrid";
 import { AddProjectDialog } from "@/components/AddProjectDialog";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
@@ -56,8 +57,6 @@ function App() {
   } | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Load data on mount
   useEffect(() => {
@@ -168,33 +167,6 @@ function App() {
     await saveData({ workspaces: newWorkspaces, settings: data.settings });
   };
 
-  const handleWorkspaceReorder = async (
-    workspaceId: string,
-    direction: "up" | "down"
-  ) => {
-    const currentIndex = data.workspaces.findIndex((w) => w.id === workspaceId);
-    if (currentIndex === -1) return;
-
-    // Can't move up if already first, can't move down if already last
-    if (
-      (direction === "up" && currentIndex === 0) ||
-      (direction === "down" && currentIndex === data.workspaces.length - 1)
-    ) {
-      return;
-    }
-
-    const newWorkspaces = [...data.workspaces];
-    const targetIndex =
-      direction === "up" ? currentIndex - 1 : currentIndex + 1;
-
-    // Swap elements
-    [newWorkspaces[currentIndex], newWorkspaces[targetIndex]] = [
-      newWorkspaces[targetIndex],
-      newWorkspaces[currentIndex],
-    ];
-
-    await saveData({ workspaces: newWorkspaces, settings: data.settings });
-  };
 
   const handleWorkspaceReorderByIndex = async (
     fromIndex: number,
@@ -447,7 +419,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <SidebarProvider className="h-screen overflow-hidden">
       <Sidebar
         workspaces={data.workspaces}
         activeWorkspaceId={
@@ -457,20 +429,16 @@ function App() {
         onWorkspaceAdd={handleWorkspaceAdd}
         onWorkspaceRename={handleWorkspaceRename}
         onWorkspaceDelete={handleWorkspaceDelete}
-        onWorkspaceReorder={handleWorkspaceReorder}
         onWorkspaceReorderByIndex={handleWorkspaceReorderByIndex}
         onSettingsClick={handleSettingsClick}
         isSettingsActive={activeView === "settings"}
         onWorkspaceCreateFromFolder={() =>
           setIsWorkspaceCreationDialogOpen(true)
         }
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        isMobileOpen={isSidebarOpen}
-        onMobileOpenChange={setIsSidebarOpen}
       />
 
-      <main className="flex-1 overflow-hidden flex">
+      <SidebarInset className="overflow-hidden min-h-0">
+      <main className="flex-1 overflow-hidden flex h-full">
         {activeView === "settings" ? (
           <Settings
             defaultIDE={data.settings.defaultIDE}
@@ -503,6 +471,7 @@ function App() {
             >
               <div className="border-b border-border bg-white dark:bg-slate-900">
                 <div className="flex items-center justify-between p-6">
+                  <SidebarTrigger className="-ml-1 mr-2 shrink-0" />
                   <div className="flex-1">
                     {isEditingWorkspaceName ? (
                       <div className="flex items-center gap-2">
@@ -665,6 +634,7 @@ function App() {
           </div>
         )}
       </main>
+      </SidebarInset>
 
       <AddProjectDialog
         open={isAddProjectDialogOpen}
@@ -708,7 +678,7 @@ function App() {
         workspaces={data.workspaces}
         defaultIDE={data.settings.defaultIDE}
       />
-    </div>
+    </SidebarProvider>
   );
 }
 
