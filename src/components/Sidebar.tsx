@@ -244,10 +244,6 @@ export function Sidebar({
                             isActive={isActive}
                             onClick={() => onWorkspaceSelect(workspace.id)}
                             tooltip={workspace.name}
-                            className={cn(
-                              isActive &&
-                                "data-[active=true]:bg-blue-50 data-[active=true]:text-blue-600 dark:data-[active=true]:bg-blue-950/50 dark:data-[active=true]:text-blue-400"
-                            )}
                           >
                             {isActive ? (
                               <FolderOpen className="shrink-0" />
@@ -348,10 +344,6 @@ export function Sidebar({
                 isActive={isSettingsActive}
                 onClick={onSettingsClick}
                 tooltip="Settings"
-                className={cn(
-                  isSettingsActive &&
-                    "data-[active=true]:bg-blue-50 data-[active=true]:text-blue-600 dark:data-[active=true]:bg-blue-950/50 dark:data-[active=true]:text-blue-400"
-                )}
               >
                 <Settings className="shrink-0" />
                 <span>Settings</span>
